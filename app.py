@@ -1,23 +1,27 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 
 import mysql
 import encrypt
 import string
 import random
+import configuration as config
+
+
 app = Flask(__name__)
 
 v = 6
+
 def generateString(size=56):
     letters = string.ascii_letters
     return ''.join(random.choice(letters) for i in range(size))
 
 @app.route('/')
 def hello_world():
-    return "Hello."
+    return "Hello.."
 
 @app.route('/admin/login')
 def login():
-    return "<input name='_csrf' value='hi'>hi</input>"
+    return '<link href="https://fonts.googleapis.com/css?family=IM+Fell+Great+Primer+SC|Zhi+Mang+Xing&display=swap" rel="stylesheet"> <style>body { font-family: "IM Fell Great Primer SC", serif; } .cn {  font-family: "Zhi Mang Xing", cursive;}</style><h1>Congratulation! You are very close to hack this website!</h1><h1 class="cn">恭喜你！ 您非常接近破解该网站！</h1><input type="hidden" name="_csrf" value="hi"></input><input type="button" value="Click here to finish your hacking!"></input>'
 
 @app.route('/planitia/register', methods=["POST"])
 def register():
@@ -44,6 +48,7 @@ def register():
         key["intervals"] = 3
     return jsonify({"code": 200, "comment": "success", "data": {"publicKey": publickey, "systemId": targetSystemId, "intervals": key["intervals"]}})
 
+
 @app.route('/planitia/sync', methods=["POST"])
 def sync():
     system = mysql.System()
@@ -62,5 +67,42 @@ def sync():
     if not result["updateRequired"] == None and result["updateRequired"] >= 1:
         return jsonify({"code": 305, "comment": "requireupdate", "data": result["updateRequired"]})
     return jsonify({"code": 200, "comment": "success"})
+
+if config.config["jupiter"]:
+    import mongodb
+    import hashlib
+    def generateEncrypted(plainText, Salt, hash="SHA512"):
+        if hash == "SHA512":
+            return hashlib.sha512((plainText + Salt).encode()).hexdigest()
+
+    mongo = mongodb.MongoDB()
+    if config.config["test"]:
+        @app.route('/jupiter/login', methods=["GET", "POST"])
+        def jupiter_login():
+            if request.method == 'POST':
+                encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
+                user = mongo.findAccount(request.form["username"], encrypted)
+                return render_template("logintest.html", title="Login", user=user)
+            else:
+                    return render_template('logintest.html', title='Login')
+
+        @app.route('/jupiter/register', methods=["GET", "POST"])
+        def jupiter_register():
+            if request.method == "POST":
+                encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
+                newAccountId = mongo.newAccount(username=request.form["username"],
+                                                password=encrypted,
+                                                firstname=request.form["first"],
+                                                lastname=request.form["last"],
+                                                email=request.form["email"],
+                                                ip=request.remote_addr,
+                                                useragent=request.headers.get('User-Agent'))
+                try:
+                    return render_template("register.html", title="Register", new=newAccountId)
+                except Exception as e:
+                    return render_template("register.html", title="Register", error=e)
+            else:
+                return render_template("register.html", title="Register")
+
 if __name__ == '__main__':
     app.run()

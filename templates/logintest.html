@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - Jupiter</title>
+     <link href="https://fonts.googleapis.com/css?family=Comfortaa&display=swap" rel="stylesheet">
+</head>
+<body>
+    <style>
+        body {
+            font-family: 'Comfortaa', cursive;
+        }
+    </style>
+    <h1>{{ title }} Kit</h1>
+    <form action="/jupiter/login" method="post">
+        <input type="text" name="username" placeholder="Username">
+        <input type="password" name="password" placeholder="Password">
+        <button>Login</button>
+        <a href="/jupiter/register">Click here to Register</a>
+    </form>
+
+    {% if user  %}
+        <h3>Result : </h3>
+        <p>ObjectID : {{ user["_id"] }}</p>
+        <p>Username : {{ user["identify"] }}</p>
+        <p>Password : {{ user["password"] }}</p>
+        <p>First Name : {{ user["firstname"] }}</p>
+        <p>Last Name : {{ user["lastname"] }}</p>
+        <p>E-mail : {{ user["email"] }}</p>
+        <p>Admin : {{ user["admin"] }}</p>
+        <p>Registered At : {{ user["created_at"] }}</p>
+
+    {% endif %}
+</body>
+</html>
