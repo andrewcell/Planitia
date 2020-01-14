@@ -5,11 +5,34 @@ import encrypt
 import string
 import random
 import configuration as config
-
+import datetime
 
 app = Flask(__name__)
 
 v = 6
+token = dict()
+
+def insertLogin(id, newToken ):
+    preventMultipleLogin(id)
+    token[newToken] = {
+        "id": id,
+        "expire": datetime.datetime.now() + datetime.timedelta(hours=1)
+    }
+    print(token)
+
+def preventMultipleLogin(id):
+    for key, value in list(token.items()):
+        if value["id"] == id:
+            token.pop(key, None)
+
+def checkLogin(newToken):
+
+    if not newToken in token:
+        return False
+    else:
+        if datetime.datetime.now() > token[newToken]["expire"]:
+            token.pop(newToken, None)
+        return token[newToken]
 
 def generateString(size=56):
     letters = string.ascii_letters
@@ -82,9 +105,44 @@ if config.config["jupiter"]:
             if request.method == 'POST':
                 encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
                 user = mongo.findAccount(request.form["username"], encrypted)
-                return render_template("logintest.html", title="Login", user=user)
+                _token = generateString(24)
+                insertLogin(user["_id"], _token)
+                verify = checkLogin(_token)
+                return render_template("logintest.html", title="Login", user=user, token=_token, token_expire=token[_token]["expire"], verify=verify)
             else:
                     return render_template('logintest.html', title='Login')
+
+        @app.route('/jupiter/register', methods=["GET", "POST"])
+        def jupiter_register():
+            if request.method == "POST":
+                encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
+                newAccountId = mongo.newAccount(username=request.form["username"],
+                                                password=encrypted,
+                                                firstname=request.form["first"],
+                                                lastname=request.form["last"],
+                                                email=request.form["email"],
+                                                ip=request.remote_addr,
+                                                useragent=request.headers.get('User-Agent'))
+                try:
+                    return render_template("register.html", title="Register", new=newAccountId)
+                except Exception as e:
+                    return render_template("register.html", title="Register", error=e)
+            else:
+                return render_template("register.html", title="Register")
+    else:
+        @app.route('/jupiter/login', methods=["POST"])
+        def jupiter_login():
+
+            encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
+            user = mongo.findAccount(request.form["username"], encrypted)
+            if not user:
+                return jsonify({"code": 401, "comment": "unauthorized"})
+            else:
+
+                _token = generateString(24)
+                insertLogin(user["_id"], _token)
+                return jsonify({"code": 200, "comment": "success", "data": {"token": _token, "expire": checkLogin(_token)["expire"]}})
+
 
         @app.route('/jupiter/register', methods=["GET", "POST"])
         def jupiter_register():

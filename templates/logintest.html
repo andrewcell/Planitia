@@ -29,7 +29,9 @@
         <p>E-mail : {{ user["email"] }}</p>
         <p>Admin : {{ user["admin"] }}</p>
         <p>Registered At : {{ user["created_at"] }}</p>
-
+        <p>Token : {{ token }}</p>
+        <p>Token Expire : {{ token_expire }}</p>
+        <p>Token Test Success : {{ verify }}</p>
     {% endif %}
 </body>
 </html>
