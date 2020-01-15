@@ -13,8 +13,8 @@
     </style>
     <h1>{{ title }} Kit</h1>
     <form action="/jupiter/login" method="post">
-        <input type="text" name="username" placeholder="Username">
-        <input type="password" name="password" placeholder="Password">
+        <input type="text" name="username" placeholder="Username" />
+        <input type="password" name="password" placeholder="Password" />
         <button>Login</button>
         <a href="/jupiter/register">Click here to Register</a>
     </form>
@@ -31,7 +31,8 @@
         <p>Registered At : {{ user["created_at"] }}</p>
         <p>Token : {{ token }}</p>
         <p>Token Expire : {{ token_expire }}</p>
-        <p>Token Test Success : {{ verify }}</p>
+
     {% endif %}
 </body>
+
 </html>

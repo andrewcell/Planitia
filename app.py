@@ -1,3 +1,5 @@
+import json
+
 from flask import Flask, jsonify, request, render_template
 
 import mysql
@@ -10,46 +12,30 @@ import datetime
 app = Flask(__name__)
 
 v = 6
-token = dict()
 
-def insertLogin(id, newToken ):
-    preventMultipleLogin(id)
-    token[newToken] = {
-        "id": id,
-        "expire": datetime.datetime.now() + datetime.timedelta(hours=1)
-    }
-    print(token)
 
-def preventMultipleLogin(id):
-    for key, value in list(token.items()):
-        if value["id"] == id:
-            token.pop(key, None)
-
-def checkLogin(newToken):
-
-    if not newToken in token:
-        return False
-    else:
-        if datetime.datetime.now() > token[newToken]["expire"]:
-            token.pop(newToken, None)
-        return token[newToken]
-
-def generateString(size=56):
+def generateString(size=56, includeNumber=False):
     letters = string.ascii_letters
+    if includeNumber:
+        letters = letters + string.digits
+
     return ''.join(random.choice(letters) for i in range(size))
+
 
 @app.route('/')
 def hello_world():
     return "Hello.."
 
+
 @app.route('/admin/login')
 def login():
     return '<link href="https://fonts.googleapis.com/css?family=IM+Fell+Great+Primer+SC|Zhi+Mang+Xing&display=swap" rel="stylesheet"> <style>body { font-family: "IM Fell Great Primer SC", serif; } .cn {  font-family: "Zhi Mang Xing", cursive;}</style><h1>Congratulation! You are very close to hack this website!</h1><h1 class="cn">恭喜你！ 您非常接近破解该网站！</h1><input type="hidden" name="_csrf" value="hi"></input><input type="button" value="Click here to finish your hacking!"></input>'
 
+
 @app.route('/planitia/register', methods=["POST"])
 def register():
     data = request.get_data()
-    #data2 = request.form["hello"]
+    # data2 = request.form["hello"]
     if len(data) < 1 or data == "" or data == None:
         return jsonify({"code": 400, "comment": "bad request"})
     if not request.form["Hello"] == "Mars World":
@@ -69,7 +55,8 @@ def register():
     systems.Insert(key["uid"], systemId, targetSystemId, encrypt.PrivateKeyToPEM(keypair), publickey)
     if not 'intervals' in key:
         key["intervals"] = 3
-    return jsonify({"code": 200, "comment": "success", "data": {"publicKey": publickey, "systemId": targetSystemId, "intervals": key["intervals"]}})
+    return jsonify({"code": 200, "comment": "success",
+                    "data": {"publicKey": publickey, "systemId": targetSystemId, "intervals": key["intervals"]}})
 
 
 @app.route('/planitia/sync', methods=["POST"])
@@ -83,84 +70,142 @@ def sync():
         return jsonify({"code": 400, "comment": "versionmismatch"})
     decrypted = encrypt.decryptData(request.form["data"], result["privKey"])
     if request.form["task"] == "sync":
-        syncdata.Insert(result["uid"], result["id"], result["systemid"], decrypted["cpu_usage"], decrypted["ram_usage"], decrypted["localip"], "00:00:00:00:00:00", decrypted["network_usage"]["sent"], decrypted["network_usage"]["recv"], decrypted["network_speed_send"], decrypted["network_speed_receive"], decrypted["disk_read"], decrypted["disk_write"], decrypted["datetime"])
+        syncdata.Insert(result["uid"], result["id"], result["systemid"], decrypted["cpu_usage"], decrypted["ram_usage"],
+                        decrypted["localip"], "00:00:00:00:00:00", decrypted["network_usage"]["sent"],
+                        decrypted["network_usage"]["recv"], decrypted["network_speed_send"],
+                        decrypted["network_speed_receive"], decrypted["disk_read"], decrypted["disk_write"],
+                        decrypted["datetime"])
     elif request.form["task"] == "information":
         ip = request.remote_addr
-        system.UpdateInformation(decrypted["name"], ip, decrypted["architecture"], decrypted["cpu_name"], decrypted["kernel_name"], decrypted["kernel_version"], decrypted["ram_size"], decrypted["distribution"]["name"], decrypted["distribution"]["version"], request.form["systemid"])
+        system.UpdateInformation(decrypted["name"], ip, decrypted["architecture"], decrypted["cpu_name"],
+                                 decrypted["kernel_name"], decrypted["kernel_version"], decrypted["ram_size"],
+                                 decrypted["distribution"]["name"], decrypted["distribution"]["version"],
+                                 request.form["systemid"])
     if not result["updateRequired"] == None and result["updateRequired"] >= 1:
         return jsonify({"code": 305, "comment": "requireupdate", "data": result["updateRequired"]})
     return jsonify({"code": 200, "comment": "success"})
 
+
 if config.config["jupiter"]:
     import mongodb
     import hashlib
+
+    token = dict()
+
+
+    def insertLogin(id, newToken):
+        preventMultipleLogin(id)
+        token[newToken] = {
+            "id": id,
+            "expire": datetime.datetime.now() + datetime.timedelta(minutes=1)
+        }
+
+
+    def preventMultipleLogin(id):
+        for key, value in list(token.items()):
+            if value["id"] == id:
+                token.pop(key, None)
+
+
+    def checkLogin(newToken):
+
+        if not newToken in token:
+            return False
+        else:
+            if datetime.datetime.now() > token[newToken]["expire"]:
+                token.pop(newToken, None)
+            return token[newToken]
+
+
     def generateEncrypted(plainText, Salt, hash="SHA512"):
         if hash == "SHA512":
             return hashlib.sha512((plainText + Salt).encode()).hexdigest()
 
+
     mongo = mongodb.MongoDB()
     if config.config["test"]:
-        @app.route('/jupiter/login', methods=["GET", "POST"])
-        def jupiter_login():
-            if request.method == 'POST':
-                encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
-                user = mongo.findAccount(request.form["username"], encrypted)
-                _token = generateString(24)
-                insertLogin(user["_id"], _token)
-                verify = checkLogin(_token)
-                return render_template("logintest.html", title="Login", user=user, token=_token, token_expire=token[_token]["expire"], verify=verify)
-            else:
-                    return render_template('logintest.html', title='Login')
-
-        @app.route('/jupiter/register', methods=["GET", "POST"])
-        def jupiter_register():
-            if request.method == "POST":
-                encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
-                newAccountId = mongo.newAccount(username=request.form["username"],
-                                                password=encrypted,
-                                                firstname=request.form["first"],
-                                                lastname=request.form["last"],
-                                                email=request.form["email"],
-                                                ip=request.remote_addr,
-                                                useragent=request.headers.get('User-Agent'))
-                try:
-                    return render_template("register.html", title="Register", new=newAccountId)
-                except Exception as e:
-                    return render_template("register.html", title="Register", error=e)
-            else:
-                return render_template("register.html", title="Register")
+        allowedMethods = ["GET", "POST"]
+        html = True
     else:
-        @app.route('/jupiter/login', methods=["POST"])
-        def jupiter_login():
-
-            encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
-            user = mongo.findAccount(request.form["username"], encrypted)
-            if not user:
-                return jsonify({"code": 401, "comment": "unauthorized"})
-            else:
-
-                _token = generateString(24)
-                insertLogin(user["_id"], _token)
-                return jsonify({"code": 200, "comment": "success", "data": {"token": _token, "expire": checkLogin(_token)["expire"]}})
+        allowedMethods = ["POST"]
+        html = False
 
 
-        @app.route('/jupiter/register', methods=["GET", "POST"])
-        def jupiter_register():
-            if request.method == "POST":
-                encrypted = generateEncrypted(request.form["password"], config.config["jupiter_salt"])
-                newAccountId = mongo.newAccount(username=request.form["username"],
-                                                password=encrypted,
-                                                firstname=request.form["first"],
-                                                lastname=request.form["last"],
-                                                email=request.form["email"],
-                                                ip=request.remote_addr,
-                                                useragent=request.headers.get('User-Agent'))
-                try:
-                    return render_template("register.html", title="Register", new=newAccountId)
-                except Exception as e:
-                    return render_template("register.html", title="Register", error=e)
-            else:
-                return render_template("register.html", title="Register")
+    def login(username, password):
+        encrypted = generateEncrypted(password, config.config["jupiter_salt"])
+        user = mongo.findAccount(username, encrypted)
+        if user is None:
+            raise Exception
+        _token = generateString(64, True)
+        insertLogin(user["_id"], _token)
+        verify = checkLogin(_token)
+        return verify, _token, user
+
+
+    def register(username, password, first, last, email, useragent, remoteip):
+        try:
+            encrypted = generateEncrypted(password, config.config["jupiter_salt"])
+            newAccountId = mongo.newAccount(username=username,
+                                            password=encrypted,
+                                            firstname=first,
+                                            lastname=last,
+                                            email=email,
+                                            ip=remoteip,
+                                            useragent=useragent)
+
+            return newAccountId
+        except:
+            pass
+
+
+    @app.route('/jupiter/login', methods=allowedMethods)
+    def jupiter_login():
+        if request.method == 'POST':
+            try:
+                if html:
+                    newToken, newTokenKey, user = login(request.form["username"], request.form["password"])
+                    return render_template("logintest.html", title="Login", user=user, token=newTokenKey,
+                                           token_expire=newToken["expire"])
+                else:
+                    data = request.get_json()
+                    newToken, newTokenKey, user = login(data["username"], data["password"])
+                    return jsonify({"code": 200, "comment": "success",
+                                    "data": {"token": newTokenKey, "expire": newToken["expire"]}})
+            except KeyError:
+                return jsonify({"code": 400, "comment": "requiredfieldempty"})
+            except Exception:
+                return jsonify({"code": 401, "comment": "usernotfound"})
+
+        else:
+            return render_template('logintest.html', title='Login')
+
+
+    @app.route('/jupiter/register', methods=allowedMethods)
+    def jupiter_register():
+        if request.method == "POST":
+            ua = request.headers.get('User-Agent')
+            remoteip = request.remote_addr
+            try:
+                if html:
+                    data = request.form
+                else:
+                    data = request.get_json()
+                accountId = register(username=data["username"],
+                                     password=data["password"],
+                                     first=data["first"],
+                                     last=data["last"],
+                                     email=data["email"],
+                                     useragent=ua,
+                                     remoteip=remoteip)
+                if html:
+                    return render_template("register.html", title="Register", new=accountId)
+                else:
+                    return jsonify({"code": 200, "comment": "success"})
+
+            except:
+                return jsonify({"code": 400, "comment": "requiredfieldempty"})
+        else:
+            return render_template("register.html", title="Register")
 
 if __name__ == '__main__':
     app.run()
