@@ -84,13 +84,14 @@ if config.config["jupiter"]:
     import hashlib
 
     token = dict()
-
-
+    internalerror = {"code": 500, "comment": "internalservererror"}
+    unauthorized = {"code": 400, "comment": "unauthorized"}
+    requirefieldempty = {"code": 400, "comment": "requiredfieldempty"}
     def insertLogin(id, newToken):
         preventMultipleLogin(id)
         token[newToken] = {
-            "id": id,
-            "expire": datetime.datetime.now() + datetime.timedelta(minutes=1)
+            "id": str(id),
+            "expire": datetime.datetime.now() + datetime.timedelta(hours=1)
         }
 
 
@@ -119,10 +120,38 @@ if config.config["jupiter"]:
     if config.config["test"]:
         allowedMethods = ["GET", "POST"]
         html = True
+        @app.route("/", methods=["GET"])
+        def root():
+            return """
+                <link href="https://fonts.googleapis.com/css?family=Mitr&display=swap" rel="stylesheet">
+                <style> body { font-family: 'Mitr', sans-serif; } </style> 
+                <h1>Jupiter Test Menu</h1>
+                <ul>
+                    <li><a href="/jupiter/login">Login</a></li>
+                    <li><a href="/jupiter/register">Register</a></li>
+                    <li><a href="/jupiter/systems">Systems</a></li>
+                    <li><a href="/jupiter/getconfig">Configuration</a></li>
+                </ul>
+            """
     else:
         allowedMethods = ["POST"]
         html = False
 
+    def returnData(req):
+        if req.headers.get("Content-Type") == "application/json":
+            return req.get_json(), True
+        else:
+            if html:
+                return req.form, False
+            else:
+                return False, False
+
+    def removeFieldsRegisterKey(registerkey):
+        registerkey.pop("id", False)
+        registerkey.pop("uid", False)
+        registerkey.pop("DateTime", False)
+        registerkey.pop("OSType", False)
+        return registerkey
 
     def login(username, password):
         encrypted = generateEncrypted(password, config.config["jupiter_salt"])
@@ -179,10 +208,7 @@ if config.config["jupiter"]:
             ua = request.headers.get('User-Agent')
             remoteip = request.remote_addr
             try:
-                if html:
-                    data = request.form
-                else:
-                    data = request.get_json()
+                data, JSON= returnData(request)
                 accountId = register(username=data["username"],
                                      password=data["password"],
                                      first=data["first"],
@@ -190,15 +216,95 @@ if config.config["jupiter"]:
                                      email=data["email"],
                                      useragent=ua,
                                      remoteip=remoteip)
-                if html:
+                if not JSON:
                     return render_template("register.html", title="Register", new=accountId)
                 else:
                     return jsonify({"code": 200, "comment": "success"})
 
             except:
-                return jsonify({"code": 400, "comment": "requiredfieldempty"})
+                return jsonify(requirefieldempty)
         else:
             return render_template("register.html", title="Register")
 
+    @app.route("/jupiter/systems", methods=allowedMethods)
+    def jupiter_systems():
+        if request.method == "POST":
+            try:
+                system = mysql.System()
+                data, JSON = returnData(request)
+
+                if not data["token"] in token:
+                    return jsonify(unauthorized)
+
+                systems = system.Select("uid", token[data["token"]]["id"])
+                if JSON:
+                    return jsonify(systems)
+                else:
+                    return render_template("systems.html", systems=systems)
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+        else:
+            return render_template("systems.html")
+
+
+    @app.route("/jupiter/setconfig", methods=["POST"])
+    def jupiter_setconfig():
+        if request.method == "POST":
+            try:
+                registerkey = mysql.RegisterKey()
+                data, JSON = returnData(request)
+
+                if not checkLogin(data["token"]): return jsonify(unauthorized)
+                uid = token[data["token"]]["id"]
+                if not ("type" in data and "value" in data):
+                    return jsonify(requirefieldempty)
+                _type = data["type"]
+
+                foundKey = registerkey.SelectBy("uid", uid)
+                interval = 3
+                password = generateString(8)
+                if _type == "password":
+                    password = data["value"]
+                    if "intervals" in foundKey:
+                        interval = foundKey["intervals"]
+                    if not registerkey.checkPasswordAvailable(data["value"]):
+                        return jsonify({"code": 200, "comment": "passwordalreadyinuse"})
+                elif _type == "interval":
+                    interval = data["value"]
+                    if "password" in foundKey:
+                        password = foundKey["password"]
+                registerkey.Update(uid, password, interval)
+
+                if JSON:
+                    return jsonify({"code": 200, "comment": "success"})
+                else:
+                    return render_template("config.html", success=True)
+
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+
+
+    @app.route("/jupiter/getconfig", methods=allowedMethods)
+    def jupiter_getconfig():
+        if request.method == "POST":
+            try:
+                registerkey = mysql.RegisterKey()
+                data, JSON = returnData(request)
+                received_token = data["token"]
+
+                if not checkLogin(received_token): return jsonify(unauthorized)
+                result = registerkey.SelectBy("uid", token[received_token]["id"])
+                if JSON:
+                    return jsonify(removeFieldsRegisterKey(result))
+                else:
+                    return render_template("config.html", data=result)
+
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+        else:
+            return render_template("config.html")
 if __name__ == '__main__':
     app.run()

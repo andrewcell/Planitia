@@ -47,13 +47,33 @@ class SyncData:
         return result
 
 class RegisterKey:
-    def Select(self, password):
-        query = "SELECT * FROM registerkey WHERE password=%s"
-        result = Query(query, (password))
+    def SelectBy(self, identifier, value):
+        if identifier == "password":
+            query = "SELECT * FROM registerkey WHERE password=%s"
+        elif identifier == "uid":
+            query = "SELECT * FROM registerkey WHERE uid=%s"
+        result = Query(query, (value))
         if result == None or result == ():
             return False
         else:
             return result[0]
+
+    def Update(self, identifierValue, password, interval, identifier="uid"):
+        if identifierValue is None or password is None or interval is None:
+            return False
+
+        query = "INSERT INTO registerkey (uid, password, intervals, OSType) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE password=%s, intervals=%s"
+        result = Query(query, (identifierValue, password, interval, "universal", password, interval))
+        return result
+
+    def checkPasswordAvailable(self, password):
+        result = Query("SELECT 1 FROM registerkey WHERE password = %s", (password))
+        if result is () or result is None:
+            return True
+        else:
+            return False
+
+
 
 class System:
     def Select(self, Identifier, Value):

@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1>Hi! Configuration!</h1>
+    <div>You know what? This job require TOKEN! you can buy it <a href={{ url_for("jupiter_login") }}>here.</a></div>
+    <h2>Cannot feel comfortable about wrong configuration?</h2>
+    <form action={{ url_for("jupiter_setconfig") }} method="post">
+        <input type="radio" name="type" value="password" /> Password
+        <input type="radio" name="type" value="interval" /> Interval
+        <input type="text" name="value" placeholder="Value">
+        <input type="text" name="token" placeholder="Token">
+        <button>Save!</button>
+    </form>
+
+    <h2>Just wondering how your configuration is beautiful?</h2>
+    <form action={{ url_for("jupiter_getconfig") }} method="post">
+    <input type="text" name="token" placeholder="Token">
+        <button>Click Here!</button>
+    </form>
+    {% if success %}
+        <h3>Successful!</h3>
+    {% endif %}
+    {% if data %}
+        <h3>Here you go!</h3>
+        <p>id (SQL) : {{ data["id"] }}</p>
+        <p>uid : {{ data["uid"] }}</p>
+        <p>password : {{ data["password"] }}</p>
+        <p>OSType : {{ data["OSType"] }}</p>
+        <p>intervals : {{ data["intervals"] }}</p>
+        <p>DateTime : {{ data["DateTime"] }}</p>
+
+    {% endif %}
+{% endblock %}

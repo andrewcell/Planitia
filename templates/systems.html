@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<style>
+    body {
+        font-family: 'Comfortaa', cursive;
+    }
+</style>
+<h1>Your Systems</h1>
+<form action="/jupiter/systems" method="post">
+    <input type="text" name="token" placeholder="Token" />
+    <button>Proceed</button>
+</form>
+{% if systems %}
+    <h3>Result : </h3>
+    {% for system in  systems  %}
+        <ul>
+            <li>id (SQL) : {{ system["id"] }}</li>
+            <li>systemid : {{ system["systemid"] }}</li>
+            <li>Private Key : {{ system["privKey"] }}</li>
+            <li>Public Key : {{ system["pubKey"] }}</li>
+            <li>updateRequired : {{ system["updateRequired"] }}</li>
+            <li>AvgUptime : {{ system["AvgUptime"] }}</li>
+            <li>Name : {{ system["name"] }}</li>
+            <li>Architecture : {{ system["architecture"] }}</li>
+            <li>RAM Size (bytes) : {{ system["ram_size"] }}</li>
+            <li>CPU name : {{ system["cpu_name"] }}</li>
+            <li>Kernel Name : {{ system["kernel_name"] }}</li>
+            <li>Kernel Version : {{ system["kernel_version"] }}</li>
+            <li>Distribution : {{ system["distribution_name"] }} {{ system["distribution_version"] }}</li>
+            <li>Host IP : {{ system["hostip"] }}</li>
+            <li>Country Code : {{ system["country_code"] }}</li>
+        </ul>
+    {% endfor %}
+{% endif %}
+{% endblock %}
