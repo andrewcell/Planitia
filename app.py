@@ -1,7 +1,7 @@
 import json
 
 from flask import Flask, jsonify, request, render_template
-
+from werkzeug.contrib.fixers import ProxyFix
 import mysql
 import encrypt
 import string
@@ -10,6 +10,7 @@ import configuration as config
 import datetime
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 v = 6
 
