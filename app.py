@@ -13,19 +13,12 @@ app = Flask(__name__)
 
 v = 6
 
-
 def generateString(size=56, includeNumber=False):
     letters = string.ascii_letters
     if includeNumber:
         letters = letters + string.digits
 
     return ''.join(random.choice(letters) for i in range(size))
-
-
-@app.route('/')
-def hello_world():
-    return "Hello.."
-
 
 @app.route('/admin/login')
 def login():
