@@ -1,4 +1,5 @@
 config = { "host": 'mysql.local.mac',
+           "port": 3306,
            "user": 'dbuser',
            "password": 'dbpass',
            "db": 'planitia',

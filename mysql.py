@@ -9,6 +9,7 @@ def installStructure():
 
 def getConnection():
     connection = pymysql.connect(host=config["host"],
+                                 port=config["port"],
                                  user=config["user"],
                                  password=config["password"],
                                  db=config["db"],
@@ -24,6 +25,8 @@ def Query(query, data):
         db.execute(Query, data)
         connection.commit()
         return db.fetchall()
+    except Exception as e:
+        print(e)
     finally:
         connection.close()
 
