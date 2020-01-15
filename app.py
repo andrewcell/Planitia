@@ -37,7 +37,7 @@ def register():
         return jsonify({"code": 400, "comment": "versionmismatch"})
 
     registerkey = mysql.RegisterKey()
-    key = registerkey.Select(request.form["password"])
+    key = registerkey.SelectBy("password", request.form["password"])
     if not key:
         return jsonify({"code": 401, "comment": "unauthorized"})
     keypair = encrypt.generatePrivateKey(4096)
