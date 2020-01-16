@@ -1,6 +1,7 @@
 import pymysql.cursors
 import pymysql
 import configuration
+from datetime import datetime
 config = configuration.config
 
 
@@ -31,7 +32,8 @@ def Query(query, data):
         connection.close()
 
 class SyncData:
-    #def __init__(self):
+    def __init__(self):
+        self.Field = "cpu_usage, disk_read, disk_write, ip1, mac1, network_receive, network_send, network_usage_received, network_usage_sent, queryTimeReadable, queryTime_Unix, ram_usage"
     def Insert(self, uid, systemid_sql, systemid, cpu_usage, ram_usage, ip, mac, network_usage_sent, network_usage_received, network_send, network_receive, disk_read, disk_write, datetime):
         query = "INSERT INTO syncdata (uid, systemid_sql, systemid, cpu_usage, ram_usage, ip1, mac1, network_usage_sent, network_usage_received, network_send, network_receive, disk_read, disk_write, queryTime_Unix, queryTimeReadable, queryTime_year, queryTime_month, queryTime_day, queryTime_hour, queryTime_minute, queryTime_second, queryTime_microsecond) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         result = Query(query, (uid, systemid_sql, systemid, cpu_usage, ram_usage, ip, mac, network_usage_sent, network_usage_received, network_send, network_receive, disk_read, disk_write, datetime["queryTimeUnix"], datetime["queryTime"], datetime["year"], datetime["month"], datetime["day"], datetime["hour"], datetime["minute"], datetime["second"], datetime["microsecond"]))
@@ -48,6 +50,21 @@ class SyncData:
             return False
         result = Query(query, (Value))
         return result
+
+    def SelectByDate(self, year, month, day, systemid):
+        if not year or not month or not day:
+            return False
+        query = "SELECT " + self.Field + " FROM SyncData WHERE queryTime_year=%s AND queryTime_month=%s AND queryTime_day=%s AND systemid=%s"
+        return Query(query, (year, month, day, systemid))
+
+    def SelectByDateTimeRange(self, start, end, systemid, uid):
+        if not(start and end):
+            return False
+
+        query = "SELECT * FROM SyncData WHERE queryTimeReadable BETWEEN %s AND %s AND systemid=%s AND uid=%s"
+        result = Query(query, (start.strftime("%Y-%m-%d %H:%M:%S:%f"), end.strftime("%Y-%m-%d %H:%M:%S:%f"), systemid, uid))
+        return result
+
 
 class RegisterKey:
     def SelectBy(self, identifier, value):

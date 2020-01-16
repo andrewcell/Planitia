@@ -166,7 +166,7 @@ if config.config["jupiter"]:
         system.pop("AvgUptime", False)
         system.pop("privKey", False)
         system.pop("pubKey", False)
-        system.pop("systemid", False)
+        #system.pop("systemid", False)
         system.pop("uid", False)
         system.pop("id", False)
         return system
@@ -340,6 +340,68 @@ if config.config["jupiter"]:
             uid = token[data["token"]]["id"]
             result = systems.SetRequireUpdate(uid)
             return jsonify({"code": 200, "comment": "success"})
+        except Exception as e:
+            print(e)
+            return jsonify(internalerror)
+
+    @app.route("/jupiter/syncdata/bydate", methods=["POST"])
+    def jupiter_requestsyncdata():
+        try:
+            now = datetime.datetime.now()
+            data, JSON = returnData()
+            items = dict()
+            if not "systemid" in data:
+                return jsonify(requirefieldempty)
+            if not "year" in data:
+                year = now.year
+            else:
+                year = data["year"]
+            if not "month" in data:
+                month = now.month
+            else:
+                month = data["month"]
+            if not "day" in data:
+                day = now.day
+            else:
+                day = data["day"]
+            syncdata = mysql.SyncData()
+            result = syncdata.SelectByDate(year, month, day, data["systemid"])
+
+            print(result)
+            return jsonify(result)
+
+        except Exception as e:
+            print(e)
+            return jsonify(internalerror)
+
+    def validateRequestDateTime(data):
+        if not("year" in data, "month" in data, "day" in data, "hour" in data, "minute" in data, "second" in data):
+            return False
+        else:
+            return True
+
+    @app.route("/jupiter/syncdata/between", methods=["POST"])
+    def jupiter_syncdatabydate():
+        try:
+            now = datetime.datetime.now()
+            syncdata = mysql.SyncData()
+            data, JSON = returnData()
+
+            if not ("start" in data and "end" in data and "systemid" in data and "token" in data):
+                return jsonify(requirefieldempty)
+            start = data["start"]
+            end = data["end"]
+            if not checkLogin(data["token"]): return jsonify(unauthorized)
+            uid = token[data["token"]]["id"]
+            if not validateRequestDateTime(start) or not validateRequestDateTime(end):
+                return jsonify(requirefieldempty)
+            start = datetime.datetime(start["year"], start["month"], start["day"], start["hour"], start["minute"], start["second"], 0)
+            end = datetime.datetime(end["year"], end["month"], end["day"], end["hour"], end["minute"], end["second"], 999999)
+
+            result = syncdata.SelectByDateTimeRange(start, end, data["systemid"], uid)
+            print(result)
+            return jsonify(result)
+
         except Exception as e:
             print(e)
             return jsonify(internalerror)
