@@ -194,17 +194,21 @@ if config.config["jupiter"]:
     def jupiter_login():
         if request.method == 'POST':
             try:
-                if html:
-                    newToken, newTokenKey, user = login(request.form["username"], request.form["password"])
-                    return render_template("logintest.html", title="Login", user=user, token=newTokenKey,
-                                           token_expire=newToken["expire"])
-                else:
-                    data = request.get_json()
-                    newToken, newTokenKey, user = login(data["username"], data["password"])
+                data, JSON = returnData()
+
+                newToken, newTokenKey, user = login(data["username"], data["password"])
+            []
+                if JSON:
                     return jsonify({"code": 200, "comment": "success",
                                     "data": {"token": newTokenKey, "expire": newToken["expire"]}})
+                else:
+                    return render_template("logintest.html", title="Login", user=user, token=newTokenKey,
+                                           token_expire=newToken["expire"])
+
+
+
             except KeyError:
-                return jsonify({"code": 400, "comment": "requiredfieldempty"})
+                return jsonify(requirefieldempty)
             except Exception:
                 return jsonify({"code": 401, "comment": "usernotfound"})
 
