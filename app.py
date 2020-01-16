@@ -162,6 +162,14 @@ if config.config["jupiter"]:
         registerkey.pop("OSType", False)
         return registerkey
 
+    def removeFieldsSystem(system):
+        system.pop("AvgUptime", False)
+        system.pop("privKey", False)
+        system.pop("pubKey", False)
+        system.pop("systemid", False)
+        system.pop("uid", False)
+        system.pop("id", False)
+        return system
 
     def login(username, password):
         encrypted = generateEncrypted(password, config.config["jupiter_salt"])
@@ -248,6 +256,9 @@ if config.config["jupiter"]:
 
                 systems = system.Select("uid", token[data["token"]]["id"])
                 if JSON:
+                    for system in systems:
+                        system = removeFieldsSystem(system)
+
                     return jsonify(systems)
                 else:
                     return render_template("systems.html", systems=systems)
