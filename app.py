@@ -195,18 +195,13 @@ if config.config["jupiter"]:
         if request.method == 'POST':
             try:
                 data, JSON = returnData()
-
                 newToken, newTokenKey, user = login(data["username"], data["password"])
-            []
                 if JSON:
                     return jsonify({"code": 200, "comment": "success",
                                     "data": {"token": newTokenKey, "expire": newToken["expire"]}})
                 else:
                     return render_template("logintest.html", title="Login", user=user, token=newTokenKey,
                                            token_expire=newToken["expire"])
-
-
-
             except KeyError:
                 return jsonify(requirefieldempty)
             except Exception:
