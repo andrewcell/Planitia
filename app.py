@@ -14,12 +14,14 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 v = 6
 
+
 def generateString(size=56, includeNumber=False):
     letters = string.ascii_letters
     if includeNumber:
         letters = letters + string.digits
 
     return ''.join(random.choice(letters) for i in range(size))
+
 
 @app.route('/admin/login')
 def login():
@@ -88,6 +90,8 @@ if config.config["jupiter"]:
     internalerror = {"code": 500, "comment": "internalservererror"}
     unauthorized = {"code": 400, "comment": "unauthorized"}
     requirefieldempty = {"code": 400, "comment": "requiredfieldempty"}
+
+
     def insertLogin(id, newToken):
         preventMultipleLogin(id)
         token[newToken] = {
@@ -121,6 +125,8 @@ if config.config["jupiter"]:
     if config.config["test"]:
         allowedMethods = ["GET", "POST"]
         html = True
+
+
         @app.route("/", methods=["GET"])
         def root():
             return """
@@ -138,14 +144,16 @@ if config.config["jupiter"]:
         allowedMethods = ["POST"]
         html = False
 
-    def returnData(req):
-        if req.headers.get("Content-Type") == "application/json":
-            return req.get_json(), True
+
+    def returnData():
+        if request.headers.get("Content-Type") == "application/json":
+            return request.get_json(), True
         else:
             if html:
-                return req.form, False
+                return request.form, False
             else:
                 return False, False
+
 
     def removeFieldsRegisterKey(registerkey):
         registerkey.pop("id", False)
@@ -153,6 +161,7 @@ if config.config["jupiter"]:
         registerkey.pop("DateTime", False)
         registerkey.pop("OSType", False)
         return registerkey
+
 
     def login(username, password):
         encrypted = generateEncrypted(password, config.config["jupiter_salt"])
@@ -209,7 +218,7 @@ if config.config["jupiter"]:
             ua = request.headers.get('User-Agent')
             remoteip = request.remote_addr
             try:
-                data, JSON= returnData(request)
+                data, JSON = returnData()
                 accountId = register(username=data["username"],
                                      password=data["password"],
                                      first=data["first"],
@@ -227,12 +236,13 @@ if config.config["jupiter"]:
         else:
             return render_template("register.html", title="Register")
 
+
     @app.route("/jupiter/systems", methods=allowedMethods)
     def jupiter_systems():
         if request.method == "POST":
             try:
                 system = mysql.System()
-                data, JSON = returnData(request)
+                data, JSON = returnData()
 
                 if not data["token"] in token:
                     return jsonify(unauthorized)
@@ -254,7 +264,7 @@ if config.config["jupiter"]:
         if request.method == "POST":
             try:
                 registerkey = mysql.RegisterKey()
-                data, JSON = returnData(request)
+                data, JSON = returnData()
 
                 if not checkLogin(data["token"]): return jsonify(unauthorized)
                 uid = token[data["token"]]["id"]
@@ -292,7 +302,7 @@ if config.config["jupiter"]:
         if request.method == "POST":
             try:
                 registerkey = mysql.RegisterKey()
-                data, JSON = returnData(request)
+                data, JSON = returnData()
                 received_token = data["token"]
 
                 if not checkLogin(received_token): return jsonify(unauthorized)
@@ -307,5 +317,22 @@ if config.config["jupiter"]:
                 return jsonify(internalerror)
         else:
             return render_template("config.html")
+
+
+    @app.route("/jupiter/requestinformationdata", methods=["POST"])
+    def jupiter_requestinformationdata():
+        try:
+            data, JSON = returnData()
+            systems = mysql.System()
+            if not "token" in data:
+                return jsonify(requirefieldempty)
+            if not checkLogin(data["token"]): return jsonify(unauthorized)
+            uid = token[data["token"]]["id"]
+            result = systems.SetRequireUpdate(uid)
+            return jsonify({"code": 200, "comment": "success"})
+        except Exception as e:
+            print(e)
+            return jsonify(internalerror)
+
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

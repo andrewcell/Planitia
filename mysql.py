@@ -104,6 +104,12 @@ class System:
         query = "UPDATE systems SET name=%s, hostip=%s, architecture=%s, cpu_name=%s, kernel_name=%s, kernel_version=%s, ram_size=%s, distribution_name=%s, distribution_version=%s, updateRequired=0 WHERE targetsystemid=%s"
         result = Query(query, (name, hostip, architecture, cpu_name, kernel_name, kernel_version, ram_size, distribution_name, distribution_version, targetsystemId))
         return result
+
+    def SetRequireUpdate(self, uid):
+        query = "UPDATE systems SET updateRequired=(SELECT intervals FROM registerkey WHERE uid=%s) WHERE uid=%s"
+        result = Query(query, (uid, uid))
+        return result
+
 '''import sqlalchemy
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Table, Text
 from sqlalchemy.orm import relationship
