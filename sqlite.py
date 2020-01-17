@@ -102,13 +102,7 @@ class System:
     def Select(self, Identifier, Value):
         if Identifier == "uid":
             query = "SELECT * FROM systems WHERE uid=?"
-        else:
-            return False
-        result = Query(query, (Value,))
-        return result
-
-    def SelectOne(self, Identifier, Value):
-        if Identifier == "id":
+        elif Identifier == "id":
             query = "SELECT * FROM systems WHERE id=?"
         elif Identifier == "targetsystemid":
             query = "SELECT * FROM systems WHERE targetsystemid=?"
@@ -116,8 +110,13 @@ class System:
             query = "SELECT * FROM systems WHERE systemid=?"
         else:
             return False
-        result = QueryReturnOne(query, (Value,))
+
+        if Identifier != "uid":
+            result = QueryReturnOne(query, (Value,))
+        else:
+            result = Query(query, (Value,))
         return result
+
 
     def Insert(self, uid, systemid, targetsystemid, privKey, pubKey):
         if uid == None or systemid == None or targetsystemid == None or privKey == None or pubKey == None:
