@@ -73,7 +73,7 @@ def sync():
     system = db.System()
     syncdata = db.SyncData()
     result = system.Select("targetsystemid", request.form["systemid"])
-    if result == None or result == ():
+    if result == None or result == () or result == False:
         return jsonify({"code": 400, "comment": "notregistered"})
     if not request.form["v"] == str(v):
         return jsonify({"code": 400, "comment": "versionmismatch"})
