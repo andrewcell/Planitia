@@ -2,12 +2,25 @@ import json
 
 from flask import Flask, jsonify, request, render_template
 from werkzeug.contrib.fixers import ProxyFix
-import mysql
+
+import sys
 import encrypt
 import string
 import random
 import configuration as config
 import datetime
+
+try:
+    if config.config["type"] == "mysql":
+        import mysql as db
+    elif config.config["type"] == "sqlite3":
+        import sqlite as db
+    else:
+        print("You must specify database type want to use.")
+        sys.exit(1)
+except KeyError:
+    print("You must specify database type want to use.")
+    sys.exit(1)
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
@@ -39,7 +52,7 @@ def register():
     if not request.form["v"] == str(v):
         return jsonify({"code": 400, "comment": "versionmismatch"})
 
-    registerkey = mysql.RegisterKey()
+    registerkey = db.RegisterKey()
     key = registerkey.SelectBy("password", request.form["password"])
     if not key:
         return jsonify({"code": 401, "comment": "unauthorized"})
@@ -47,7 +60,7 @@ def register():
     publickey = encrypt.PublicKeyToPEM(keypair)
     systemId = "avc" + generateString()
     targetSystemId = generateString()
-    systems = mysql.System()
+    systems = db.System()
     systems.Insert(key["uid"], systemId, targetSystemId, encrypt.PrivateKeyToPEM(keypair), publickey)
     if not 'intervals' in key:
         key["intervals"] = 3
@@ -57,8 +70,8 @@ def register():
 
 @app.route('/planitia/sync', methods=["POST"])
 def sync():
-    system = mysql.System()
-    syncdata = mysql.SyncData()
+    system = db.System()
+    syncdata = db.SyncData()
     result = system.Select("targetsystemid", request.form["systemid"])[0]
     if result == None or result == ():
         return jsonify({"code": 400, "comment": "notregistered"})
@@ -85,6 +98,7 @@ def sync():
 if config.config["jupiter"]:
     import mongodb
     import hashlib
+
 
     token = dict()
     internalerror = {"code": 500, "comment": "internalservererror"}
@@ -248,9 +262,9 @@ if config.config["jupiter"]:
     def jupiter_systems():
         if request.method == "POST":
             try:
-                system = mysql.System()
-                data, JSON = returnData()
 
+                data, JSON = returnData()
+                system = db.System()
                 if not data["token"] in token:
                     return jsonify(unauthorized)
 
@@ -258,7 +272,6 @@ if config.config["jupiter"]:
                 if JSON:
                     for system in systems:
                         system = removeFieldsSystem(system)
-
                     return jsonify(systems)
                 else:
                     return render_template("systems.html", systems=systems)
@@ -273,7 +286,7 @@ if config.config["jupiter"]:
     def jupiter_setconfig():
         if request.method == "POST":
             try:
-                registerkey = mysql.RegisterKey()
+                registerkey = db.RegisterKey()
                 data, JSON = returnData()
 
                 if not checkLogin(data["token"]): return jsonify(unauthorized)
@@ -311,12 +324,15 @@ if config.config["jupiter"]:
     def jupiter_getconfig():
         if request.method == "POST":
             try:
-                registerkey = mysql.RegisterKey()
+                registerkey = db.RegisterKey()
                 data, JSON = returnData()
                 received_token = data["token"]
 
                 if not checkLogin(received_token): return jsonify(unauthorized)
+
                 result = registerkey.SelectBy("uid", token[received_token]["id"])
+                if result == False or result == ():
+                    result = {"comment": "notfound"}
                 if JSON:
                     return jsonify(removeFieldsRegisterKey(result))
                 else:
@@ -333,7 +349,7 @@ if config.config["jupiter"]:
     def jupiter_requestinformationdata():
         try:
             data, JSON = returnData()
-            systems = mysql.System()
+            systems = db.System()
             if not "token" in data:
                 return jsonify(requirefieldempty)
             if not checkLogin(data["token"]): return jsonify(unauthorized)
@@ -364,7 +380,7 @@ if config.config["jupiter"]:
                 day = now.day
             else:
                 day = data["day"]
-            syncdata = mysql.SyncData()
+            syncdata = db.SyncData()
             result = syncdata.SelectByDate(year, month, day, data["systemid"])
 
             print(result)
@@ -384,7 +400,7 @@ if config.config["jupiter"]:
     def jupiter_syncdatabydate():
         try:
             now = datetime.datetime.now()
-            syncdata = mysql.SyncData()
+            syncdata = db.SyncData()
             data, JSON = returnData()
 
             if not ("start" in data and "end" in data and "systemid" in data and "token" in data):
