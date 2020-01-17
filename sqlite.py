@@ -89,8 +89,9 @@ class RegisterKey:
         return result
 
     def checkPasswordAvailable(self, password):
-        result = Query("SELECT 1 FROM registerkey WHERE password = ?", (password,))
-        if result is () or result is None:
+        result = QueryReturnOne("SELECT 1 FROM registerkey WHERE password = ?", (password,))
+        print(result)
+        if result is () or result is None or result is []:
             return True
         else:
             return False
