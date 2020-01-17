@@ -295,6 +295,8 @@ if config.config["jupiter"]:
                 _type = data["type"]
 
                 foundKey = registerkey.SelectBy("uid", uid)
+                if foundKey == False:
+                    return dict()
                 interval = 3
                 password = generateString(8)
                 if _type == "password":
