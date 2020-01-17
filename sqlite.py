@@ -99,17 +99,23 @@ class RegisterKey:
 
 class System:
     def Select(self, Identifier, Value):
+        if Identifier == "uid":
+            query = "SELECT * FROM systems WHERE uid=?"
+        else:
+            return False
+        result = Query(query, (Value,))
+        return result
+
+    def SelectOne(self, Identifier, Value):
         if Identifier == "id":
             query = "SELECT * FROM systems WHERE id=?"
         elif Identifier == "targetsystemid":
             query = "SELECT * FROM systems WHERE targetsystemid=?"
         elif Identifier == "systemid":
             query = "SELECT * FROM systems WHERE systemid=?"
-        elif Identifier == "uid":
-            query = "SELECT * FROM systems WHERE uid=?"
         else:
             return False
-        result = Query(query, (Value,))
+        result = QueryReturnOne(query, (Value,))
         return result
 
     def Insert(self, uid, systemid, targetsystemid, privKey, pubKey):

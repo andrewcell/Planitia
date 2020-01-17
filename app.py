@@ -72,7 +72,7 @@ def register():
 def sync():
     system = db.System()
     syncdata = db.SyncData()
-    result = system.Select("targetsystemid", request.form["systemid"])[0]
+    result = system.Select("targetsystemid", request.form["systemid"])
     if result == None or result == ():
         return jsonify({"code": 400, "comment": "notregistered"})
     if not request.form["v"] == str(v):
@@ -139,7 +139,6 @@ if config.config["jupiter"]:
     if config.config["test"]:
         allowedMethods = ["GET", "POST"]
         html = True
-
 
         @app.route("/", methods=["GET"])
         def root():

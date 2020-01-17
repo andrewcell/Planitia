@@ -108,6 +108,8 @@ class System:
         else:
             return False
         result = Query(query, (Value))
+        if Identifier != "uid":
+            return result[0]
         return result
 
     def Insert(self, uid, systemid, targetsystemid, privKey, pubKey):
