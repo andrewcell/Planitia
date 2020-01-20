@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<style>
+    body {
+        font-family: 'Comfortaa', cursive;
+    }
+</style>
+<h1>Download System Sync data Excel File</h1>
+<form action="/jupiter/syncdata/excel" method="post">
+    <input type="text" name="token" placeholder="Token" />
+    <input type="text" name="systemid" placeholder="System ID" />
+    <button>Download</button>
+</form>
+{% endblock %}

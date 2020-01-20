@@ -1,6 +1,6 @@
 import json
 
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, send_file
 from werkzeug.contrib.fixers import ProxyFix
 
 import sys
@@ -98,13 +98,16 @@ def sync():
 if config.config["jupiter"]:
     import mongodb
     import hashlib
-
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.writer.excel import save_virtual_workbook
+    from openpyxl.worksheet.table import Table, TableStyleInfo
 
     token = dict()
     internalerror = {"code": 500, "comment": "internalservererror"}
     unauthorized = {"code": 400, "comment": "unauthorized"}
     requirefieldempty = {"code": 400, "comment": "requiredfieldempty"}
-
+    notfound = {"code": 400, "comment": "notfound" }
 
     def insertLogin(id, newToken):
         preventMultipleLogin(id)
@@ -120,8 +123,10 @@ if config.config["jupiter"]:
                 token.pop(key, None)
 
 
-    def checkLogin(newToken):
-
+    def checkLogin(data):
+        if not "token" in data:
+            return False
+        newToken = data["token"]
         if not newToken in token:
             return False
         else:
@@ -191,7 +196,7 @@ if config.config["jupiter"]:
             raise Exception
         _token = generateString(64, True)
         insertLogin(user["_id"], _token)
-        verify = checkLogin(_token)
+        verify = checkLogin({"token": _token})
         return verify, _token, user
 
 
@@ -219,14 +224,15 @@ if config.config["jupiter"]:
                 newToken, newTokenKey, user = login(data["username"], data["password"])
                 if JSON:
                     return jsonify({"code": 200, "comment": "success",
-                                    "data": {"token": newTokenKey, "expire": newToken["expire"]}})
+                                    "data": {"token": newTokenKey, "expire": token[newTokenKey]["expire"]}})
                 else:
                     return render_template("logintest.html", title="Login", user=user, token=newTokenKey,
                                            token_expire=newToken["expire"])
             except KeyError:
                 return jsonify(requirefieldempty)
-            except Exception:
-                return jsonify({"code": 401, "comment": "usernotfound"})
+            except Exception as e:
+                print(e)
+                return jsonify(notfound)
 
         else:
             return render_template('logintest.html', title='Login')
@@ -353,7 +359,7 @@ if config.config["jupiter"]:
             systems = db.System()
             if not "token" in data:
                 return jsonify(requirefieldempty)
-            if not checkLogin(data["token"]): return jsonify(unauthorized)
+            if not checkLogin(data): return jsonify(unauthorized)
             uid = token[data["token"]]["id"]
             result = systems.SetRequireUpdate(uid)
             return jsonify({"code": 200, "comment": "success"})
@@ -382,7 +388,7 @@ if config.config["jupiter"]:
             else:
                 day = data["day"]
             syncdata = db.SyncData()
-            result = syncdata.SelectByDate(year, month, day, data["systemid"])
+            result = syncdata.SelectByDate(year, month, day, data["systemid"], token[data["token"]]["id"])
 
             print(result)
             return jsonify(result)
@@ -408,7 +414,7 @@ if config.config["jupiter"]:
                 return jsonify(requirefieldempty)
             start = data["start"]
             end = data["end"]
-            if not checkLogin(data["token"]): return jsonify(unauthorized)
+            if not checkLogin(data): return jsonify(unauthorized)
             uid = token[data["token"]]["id"]
             if not validateRequestDateTime(start) or not validateRequestDateTime(end):
                 return jsonify(requirefieldempty)
@@ -422,6 +428,39 @@ if config.config["jupiter"]:
         except Exception as e:
             print(e)
             return jsonify(internalerror)
+
+    @app.route("/jupiter/syncdata/excel", methods=allowedMethods)
+    def jupiter_excel():
+        if request.method == "POST":
+            try:
+
+                now = datetime.datetime.now()
+                data, JSON = returnData()
+                if not checkLogin(data): return jsonify(unauthorized)
+                syncdata = db.SyncData()
+                wb = Workbook()
+                sheet = wb.active
+                data = syncdata.SelectBy("systemid", data["systemid"], token[data["token"]]["id"])
+                if data == None or data == () or data == []:
+                    return jsonify(notfound)
+                sheet.append(['id', 'systemid_sql', 'systemid', 'cpu_usage', 'ram_usage', 'ip1', 'ip2', 'ip3', 'mac1', 'mac2', 'mac3', 'network_usage_sent', 'network_usage_received', 'network_send', 'network_receive', 'disk_read', 'disk_write', 'queryTimeAtMars', 'queryTime_Unix', 'queryTimeReadable', 'queryTime_year', 'queryTime_month', 'queryTime_day', 'queryTime_hour', 'queryTime_minute', 'queryTime_second', 'queryTime_microsecond', 'uid'])
+                for row in data:
+                    lst = []
+                    for key, value in row.items():
+                        lst.append(value)
+                    sheet.append(lst)
+                table = Table(displayName="SyncData", ref="A1:AB"+str(len(data)+1))
+                style = TableStyleInfo(name="TableStyleLight9", showFirstColumn=False,
+                                       showLastColumn=False, showRowStripes=True, showColumnStripes=True)
+                table.tableStyleInfo = style
+                sheet.add_table(table)
+                a = BytesIO(save_virtual_workbook(wb))
+                return send_file(a, attachment_filename=str(now)+".xlsx", as_attachment=True)
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+        else:
+            return render_template("excel.html")
 
 if __name__ == '__main__':
     app.run(debug=True)

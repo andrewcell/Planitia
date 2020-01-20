@@ -39,23 +39,23 @@ class SyncData:
         result = Query(query, (uid, systemid_sql, systemid, cpu_usage, ram_usage, ip, mac, network_usage_sent, network_usage_received, network_send, network_receive, disk_read, disk_write, datetime["queryTimeUnix"], datetime["queryTime"], datetime["year"], datetime["month"], datetime["day"], datetime["hour"], datetime["minute"], datetime["second"], datetime["microsecond"]))
         return result
 
-    def SelectBy(self, Identifier, Value):
+    def SelectBy(self, Identifier, Value, uid):
         if Identifier == "systemid_sql":
-            query = "SELECT * FROM SyncData WHERE systemid_sql=%s"
+            query = "SELECT * FROM SyncData WHERE systemid_sql=%s AND uid=%s"
         elif Identifier == "systemid":
-            query = "SELECT * FROM SyncData WHERE systemid=%s"
+            query = "SELECT * FROM SyncData WHERE systemid=%s AND uid=%s"
         elif Identifier == "id":
-            query = "SELECT * FROM SyncData WHERE id=%s"
+            query = "SELECT * FROM SyncData WHERE id=%s AND uid=%s"
         else:
             return False
-        result = Query(query, (Value))
+        result = Query(query, (Value, uid))
         return result
 
-    def SelectByDate(self, year, month, day, systemid):
+    def SelectByDate(self, year, month, day, systemid, uid):
         if not year or not month or not day:
             return False
-        query = "SELECT " + self.Field + " FROM SyncData WHERE queryTime_year=%s AND queryTime_month=%s AND queryTime_day=%s AND systemid=%s"
-        return Query(query, (year, month, day, systemid))
+        query = "SELECT " + self.Field + " FROM SyncData WHERE queryTime_year=%s AND queryTime_month=%s AND queryTime_day=%s AND systemid=%s AND uid=%s"
+        return Query(query, (year, month, day, systemid, uid))
 
     def SelectByDateTimeRange(self, start, end, systemid, uid):
         if not(start and end):
