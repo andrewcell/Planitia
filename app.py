@@ -149,17 +149,7 @@ if config.config["jupiter"]:
 
         @app.route("/", methods=["GET"])
         def root():
-            return """
-                <link href="https://fonts.googleapis.com/css?family=Mitr&display=swap" rel="stylesheet">
-                <style> body { font-family: 'Mitr', sans-serif; } </style> 
-                <h1>Jupiter Test Menu</h1>
-                <ul>
-                    <li><a href="/jupiter/login">Login</a></li>
-                    <li><a href="/jupiter/register">Register</a></li>
-                    <li><a href="/jupiter/systems">Systems</a></li>
-                    <li><a href="/jupiter/getconfig">Configuration</a></li>
-                </ul>
-            """
+            return render_template("index.html")
     else:
         allowedMethods = ["POST"]
         html = False
@@ -269,7 +259,6 @@ if config.config["jupiter"]:
     def jupiter_systems():
         if request.method == "POST":
             try:
-
                 data, JSON = returnData()
                 system = db.System()
                 if not data["token"] in token:
@@ -354,50 +343,56 @@ if config.config["jupiter"]:
             return render_template("config.html")
 
 
-    @app.route("/jupiter/requestinformationdata", methods=["POST"])
+    @app.route("/jupiter/requestinformationdata", methods=allowedMethods)
     def jupiter_requestinformationdata():
-        try:
-            data, JSON = returnData()
-            systems = db.System()
-            if not "token" in data:
-                return jsonify(requirefieldempty)
-            if not checkLogin(data): return jsonify(unauthorized)
-            uid = token[data["token"]]["id"]
-            result = systems.SetRequireUpdate(uid)
-            return jsonify({"code": 200, "comment": "success"})
-        except Exception as e:
-            print(e)
-            return jsonify(internalerror)
+        if request.method == "POST":
+            try:
+                data, JSON = returnData()
+                systems = db.System()
+                if not "token" in data:
+                    return jsonify(requirefieldempty)
+                if not checkLogin(data): return jsonify(unauthorized)
+                uid = token[data["token"]]["id"]
+                result = systems.SetRequireUpdate(uid)
+                return jsonify({"code": 200, "comment": "success"})
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+        else:
+            return render_template("requestinformationdata.html")
 
-    @app.route("/jupiter/syncdata/bydate", methods=["POST"])
+    @app.route("/jupiter/syncdata/bydate", methods=allowedMethods)
     def jupiter_requestsyncdata():
-        try:
-            now = datetime.datetime.now()
-            data, JSON = returnData()
-            items = dict()
-            if not "systemid" in data:
-                return jsonify(requirefieldempty)
-            if not "year" in data:
-                year = now.year
-            else:
-                year = data["year"]
-            if not "month" in data:
-                month = now.month
-            else:
-                month = data["month"]
-            if not "day" in data:
-                day = now.day
-            else:
-                day = data["day"]
-            syncdata = db.SyncData()
-            result = syncdata.SelectByDate(year, month, day, data["systemid"], token[data["token"]]["id"])
+        if request.method == "POST":
+            try:
+                now = datetime.datetime.now()
+                data, JSON = returnData()
+                items = dict()
+                if not "systemid" in data:
+                    return jsonify(requirefieldempty)
+                if not "year" in data:
+                    year = now.year
+                else:
+                    year = data["year"]
+                if not "month" in data:
+                    month = now.month
+                else:
+                    month = data["month"]
+                if not "day" in data:
+                    day = now.day
+                else:
+                    day = data["day"]
+                syncdata = db.SyncData()
+                result = syncdata.SelectByDate(year, month, day, data["systemid"], token[data["token"]]["id"])
 
-            print(result)
-            return jsonify(result)
+                print(result)
+                return jsonify(result)
 
-        except Exception as e:
-            print(e)
-            return jsonify(internalerror)
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+        else:
+            return ""
 
     def validateRequestDateTime(data):
         if not("year" in data, "month" in data, "day" in data, "hour" in data, "minute" in data, "second" in data):
@@ -405,32 +400,34 @@ if config.config["jupiter"]:
         else:
             return True
 
-    @app.route("/jupiter/syncdata/between", methods=["POST"])
+    @app.route("/jupiter/syncdata/between", methods=allowedMethods)
     def jupiter_syncdatabydate():
-        try:
-            now = datetime.datetime.now()
-            syncdata = db.SyncData()
-            data, JSON = returnData()
+        if request.method == "POST":
+            try:
+                now = datetime.datetime.now()
+                syncdata = db.SyncData()
+                data, JSON = returnData()
 
-            if not ("start" in data and "end" in data and "systemid" in data and "token" in data):
-                return jsonify(requirefieldempty)
-            start = data["start"]
-            end = data["end"]
-            if not checkLogin(data): return jsonify(unauthorized)
-            uid = token[data["token"]]["id"]
-            if not validateRequestDateTime(start) or not validateRequestDateTime(end):
-                return jsonify(requirefieldempty)
-            start = datetime.datetime(start["year"], start["month"], start["day"], start["hour"], start["minute"], start["second"], 0)
-            end = datetime.datetime(end["year"], end["month"], end["day"], end["hour"], end["minute"], end["second"], 999999)
+                if not ("start" in data and "end" in data and "systemid" in data and "token" in data):
+                    return jsonify(requirefieldempty)
+                start = data["start"]
+                end = data["end"]
+                if not checkLogin(data): return jsonify(unauthorized)
+                uid = token[data["token"]]["id"]
+                if not validateRequestDateTime(start) or not validateRequestDateTime(end):
+                    return jsonify(requirefieldempty)
+                start = datetime.datetime(start["year"], start["month"], start["day"], start["hour"], start["minute"], start["second"], 0)
+                end = datetime.datetime(end["year"], end["month"], end["day"], end["hour"], end["minute"], end["second"], 999999)
 
-            result = syncdata.SelectByDateTimeRange(start, end, data["systemid"], uid)
-            print(result)
-            return jsonify(result)
+                result = syncdata.SelectByDateTimeRange(start, end, data["systemid"], uid)
+                print(result)
+                return jsonify(result)
 
-        except Exception as e:
-            print(e)
-            return jsonify(internalerror)
-
+            except Exception as e:
+                print(e)
+                return jsonify(internalerror)
+        else:
+            return render_template("syncdatabydate.html")
     @app.route("/jupiter/syncdata/excel", methods=allowedMethods)
     def jupiter_excel():
         if request.method == "POST":

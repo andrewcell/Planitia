@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+
+{% block content %}
+    <h1>Request information Data</h1>
+    <form action="/jupiter/requestinformationdata" method="post">
+        <input type="text" name="token" placeholder="Token" />
+        <button>Proceed</button>
+    </form>
+{% endblock %}

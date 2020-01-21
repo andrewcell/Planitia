@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+{%  block content %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            var func = function(item) {
+                arr = ["year", "month", "day", "hour", "minute", "second"];
+                a = {};
+                arr.forEach(function (value) {
+                    a[value] = parseInt($("#"+item + "_" + value).val());
+                });
+                return a
+            };
+           $("#button").click(function() {
+               $("#result").remove();
+               $.ajax({
+                   url: "/jupiter/syncdata/between",
+                   method: "post",
+                   data: JSON.stringify({
+                       "token": $("#token").val(),
+                       "systemid": $("#systemid").val(),
+                       "start": func("from"),
+                       "end": func("to")
+                   }),
+                   dataType: "json",
+                   contentType: "application/json",
+                   success: function(result) {
+                       body = $("body");
+                       body.append("<div id='result'><p>code: " + result["code"]+"</p>");
+                       resultDiv = $("#result");
+                       resultDiv.append("<p>comment: " + result["comment"]+"</p>");
+                       result.forEach(function (data) {
+                        resultDiv.append("<pre>"+JSON.stringify(data, null, 4)+"</pre>");
+                        resultDiv.append("<hr>")
+                       });
+                       body.append("</div>")
+
+                    }
+               })
+           });
+
+        });
+    </script>
+    <form>
+    <h1>Search by Between DateTime</h1>
+    <input type="text" name="token" placeholder="Token" id="token"/>
+        <input type="text" name="systemid" placeholder="System ID" id="systemid" />
+        <p>From:</p>
+
+        <input type="text" name="from_year" placeholder="Year" id="from_year" />
+        <input type="text" name="from_month" placeholder="Month" id="from_month" />
+        <input type="text" name="from_day" placeholder="Day" id="from_day"/>
+        <input type="text" name="from_hour" placeholder="Hour" id="from_hour" />
+        <input type="text" name="from_minute" placeholder="Minute" id="from_minute" />
+        <input type="text" name="from_second" placeholder="Second" id="from_second" />
+        <p>To:</p>
+        <input type="text" name="to_year" placeholder="Year" id="to_year" />
+        <input type="text" name="to_month" placeholder="Month" id="to_month" />
+        <input type="text" name="to_day" placeholder="Day" id="to_day" />
+        <input type="text" name="to_hour" placeholder="Hour" id="to_hour"/>
+        <input type="text" name="to_minute" placeholder="Minute" id="to_minute" />
+        <input type="text" name="to_second" placeholder="Second" id="to_second" />
+        <input id="button" type="button" value="Proceed"></input>
+    </form>
+{%  endblock %}
