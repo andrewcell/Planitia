@@ -1,4 +1,4 @@
-import json
+import JSON
 
 from flask import Flask, jsonify, request, render_template, send_file
 from werkzeug.contrib.fixers import ProxyFix
@@ -15,6 +15,8 @@ try:
         import mysql as db
     elif config.config["type"] == "sqlite3":
         import sqlite as db
+    elif config.config["type"] == "json":
+        import JSON as db
     else:
         print("You must specify database type want to use.")
         sys.exit(1)
