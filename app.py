@@ -392,7 +392,7 @@ if config.config["jupiter"]:
                 print(e)
                 return jsonify(internalerror)
         else:
-            return ""
+            return render_template("realbydate.html")
 
     def validateRequestDateTime(data):
         if not("year" in data, "month" in data, "day" in data, "hour" in data, "minute" in data, "second" in data):

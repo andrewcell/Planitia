@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{%  block content %}
+    <h1>Search by Date</h1>
+    <form action="/jupiter/syncdata/bydate", method="post">
+
+    <input type="text" name="token" placeholder="Token" id="token"/>
+        <input type="text" name="systemid" placeholder="System ID" id="systemid" />
+        <p>DateTime : </p>
+
+        <input type="text" name="year" placeholder="Year" id="from_year" />
+        <input type="text" name="month" placeholder="Month" id="from_month" />
+        <input type="text" name="day" placeholder="Day" id="from_day"/>
+
+        <button>Proceed</button>
+    </form>
+{%  endblock %}
