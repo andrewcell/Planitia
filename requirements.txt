@@ -2,7 +2,7 @@ openpyxl==3.0.3
 altgraph==0.17
 cffi==1.13.2
 Click==7.0
-cryptography==2.8
+cryptography==3.2
 Flask==1.1.1
 itsdangerous==1.1.0
 Jinja2==2.10.3
